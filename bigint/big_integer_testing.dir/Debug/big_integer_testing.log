@@ -1,0 +1,5 @@
+﻿  big_integer_testing.cpp
+LINK : warning LNK4044: нераспознанный параметр "/lgmp"; игнорируется
+LINK : warning LNK4044: нераспознанный параметр "/lgmpxx"; игнорируется
+LINK : warning LNK4044: нераспознанный параметр "/lpthread"; игнорируется
+  big_integer_testing.vcxproj -> D:\С++\cpp-course\bigint\Debug\big_integer_testing.exe
