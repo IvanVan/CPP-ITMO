@@ -11,6 +11,7 @@ struct big_integer {
 	big_integer(big_integer const& other);
 	big_integer(int a);
 	explicit big_integer(std::string const& str);
+	big_integer(std::vector<unsigned int> const &a, bool sign);
 	~big_integer();
 
 	big_integer& operator=(big_integer const& other);
@@ -62,8 +63,6 @@ private:
 
 	void add_zero(int, std::vector <unsigned int>&);
 
-	big_integer(std::vector <unsigned int> const& a, bool sign);
-
 	void pop(int, std::vector <unsigned int>&);
 
 	void add_module(big_integer const& a, big_integer const& b, std::vector <unsigned int>& tmp);
@@ -91,6 +90,8 @@ private:
 	bool is_deg2();
 
 	void correct();
+
+	void divide_by_32();
 };
 
 big_integer operator+(big_integer a, big_integer const& b);

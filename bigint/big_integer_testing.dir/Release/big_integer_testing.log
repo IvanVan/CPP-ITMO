@@ -1,7 +1,5 @@
 ﻿  big_integer.cpp
-D:\С++\cpp-course\bigint\big_integer.cpp(294): warning C4244: =: преобразование "unsigned __int64" в "unsigned int", возможна потеря данных
-  big_integer_testing.cpp
-  Создание кода...
+D:\С++\cpp-course\bigint\big_integer.cpp(305): warning C4244: =: преобразование "unsigned __int64" в "unsigned int", возможна потеря данных
 LINK : warning LNK4044: нераспознанный параметр "/lgmp"; игнорируется
 LINK : warning LNK4044: нераспознанный параметр "/lgmpxx"; игнорируется
 LINK : warning LNK4044: нераспознанный параметр "/lpthread"; игнорируется

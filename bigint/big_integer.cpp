@@ -33,6 +33,14 @@ void big_integer::correct()
 		isNegate = 0;
 }
 
+void big_integer::divide_by_32()
+{
+	this->data.pop_back();
+	if (!this->data.empty()) {
+		this->data[(this->data.size()) - 1] = 1;
+	}
+}
+
 big_integer big_integer::bin_pow(int n) {
 	big_integer a;
 	a.data.resize(n + 1);
@@ -278,21 +286,23 @@ void big_integer::do_division(big_integer const& rhs, big_integer& remaind, std:
 	int m = (remaind.data.size() - b.data.size());
 	int n = b.data.size();
 	tmp.resize(m + 1, 0);
-	big_integer b_m = bin_pow(m);
-	if (!compare_module((b_m * b), remaind)) {
+	std::vector<unsigned int> for_bj(m + 1, 0);
+	for_bj[m] = 1;
+	big_integer b_j(for_bj, false);
+	if (!compare_module((b_j * b), remaind)) {
 		tmp[m] = 1;
-		remaind -= (b_m * b);
+		remaind -= (b_j * b);
 	}
 	else {
 		tmp[m] = 0;
 	}
+	b_j.divide_by_32();
 	for (int j = m - 1; j >= 0; j--) {
 		unsigned long long now = (unsigned int)(n + j) < remaind.data.size() ? remaind.data[n + j] * 1ULL * base : 0;
 		now += (unsigned int)(n + j - 1) < remaind.data.size() ? remaind.data[n + j - 1] * 1ULL : 0;
 		now /= (b.data[n - 1] * 1ULL);
 		now = std::min(now, base * 1ULL - 1);
 		tmp[j] = now;
-		big_integer b_j = bin_pow(j);
 		big_integer cur = b;
 		cur *= b_j;
 		cur.multiply_by_const((unsigned int)now);
@@ -301,6 +311,7 @@ void big_integer::do_division(big_integer const& rhs, big_integer& remaind, std:
 			tmp[j]--;
 			remaind += (b_j * b);
 		}
+		b_j.divide_by_32();
 	}
 	pop_zero(tmp);
 	remaind.division_by_const(more);
