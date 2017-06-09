@@ -41,6 +41,40 @@ void big_integer::divide_by_32()
 	}
 }
 
+unsigned int big_integer::calculate(unsigned int a, unsigned int b, unsigned int c)
+{
+	unsigned long long res = a;
+	res = ((res << (32ULL)) + b) / c;
+	res = std::min(res, base * 1ULL - 1);
+	return (unsigned int)res;
+}
+
+bool big_integer::compare_equal_vectors(vector<unsigned int> const & a, vector<unsigned int> const & b)
+{
+	for (size_t i = a.size(); i > 0; i--) {
+		if (a[i - 1] != b[i - 1]) {
+			return a[i - 1] < b[i - 1];
+		}
+	}
+	return false;
+}
+
+void big_integer::sub_equal_vectors(vector<unsigned int>& a, vector<unsigned int> const & b)
+{
+	unsigned int carry = 0;
+	for (size_t i = 0; i < b.size(); ++i) {
+		long long sum = a[i] * 1LL - carry - b[i];
+		if (sum < 0) {
+			carry = 1;
+			a[i] = (unsigned int)(base + sum);
+		}
+		else {
+			carry = 0;
+			a[i] = (unsigned int)(sum);
+		}
+	}
+}
+
 big_integer big_integer::bin_pow(int n) {
 	big_integer a;
 	a.data.resize(n + 1);
@@ -279,42 +313,55 @@ void big_integer::division_by_const(unsigned int b) {
 	this->data = a;
 }
 
-void big_integer::do_division(big_integer const& rhs, big_integer& remaind, std::vector <unsigned int>& tmp) {
-	big_integer b(rhs);
-	b.isNegate = false;
-	unsigned int more = make_normalized(b, remaind);
-	int m = (remaind.data.size() - b.data.size());
-	int n = b.data.size();
-	tmp.resize(m + 1, 0);
-	std::vector<unsigned int> for_bj(m + 1, 0);
-	for_bj[m] = 1;
-	big_integer b_j(for_bj, false);
-	if (!compare_module((b_j * b), remaind)) {
-		tmp[m] = 1;
-		remaind -= (b_j * b);
+void big_integer::mul_vector_by_const(std::vector<unsigned int>& res, std::vector<unsigned int> const & a, unsigned int const& b)
+{
+	unsigned int carry = 0;
+	size_t n = a.size();
+	res.resize(n + 1);
+	for (size_t i = 0; i < n; ++i) {
+		unsigned long long cur = carry + a[i] * 1ULL * b;
+		res[i] = (unsigned int)(cur % base);
+		carry = (unsigned int)(cur / base);
 	}
-	else {
-		tmp[m] = 0;
+	res[n] = carry;
+}
+
+big_integer big_integer::do_division(big_integer const& a, big_integer const& b) {
+	big_integer abs_a(a.data, false);
+	big_integer abs_b(b.data, false);
+	size_t n = a.data.size();
+	size_t m = b.data.size();
+	if (m > n) {
+		return 0;
 	}
-	b_j.divide_by_32();
-	for (int j = m - 1; j >= 0; j--) {
-		unsigned long long now = (unsigned int)(n + j) < remaind.data.size() ? remaind.data[n + j] * 1ULL * base : 0;
-		now += (unsigned int)(n + j - 1) < remaind.data.size() ? remaind.data[n + j - 1] * 1ULL : 0;
-		now /= (b.data[n - 1] * 1ULL);
-		now = std::min(now, base * 1ULL - 1);
-		tmp[j] = now;
-		big_integer cur = b;
-		cur *= b_j;
-		cur.multiply_by_const((unsigned int)now);
-		remaind -= cur;
-		while (remaind < 0) {
-			tmp[j]--;
-			remaind += (b_j * b);
+	unsigned int f = (unsigned int)((UINT32_MAX * 1ULL + 1) / (abs_b.data.back() * 1ULL + 1));
+	abs_a.multiply_by_const(f);
+	abs_b.multiply_by_const(f);
+
+	const size_t len = n - m + 1;
+	const unsigned int divisor = abs_b.data.back();
+	vector<unsigned int> temp(len);
+	vector<unsigned int> dev(m + 1), div(m + 1, 0);
+	for (size_t i = 0; i < m; i++) {
+		dev[i] = abs_a.data[n + i - m];
+	}
+	dev[m] = abs_a.data.size() > n ? abs_a.data[n] : 0;
+	for (size_t i = 0; i < len; i++) {
+		dev[0] = abs_a.data[n - m - i];
+		size_t ri = len - 1 - i;
+		unsigned int tq = calculate(dev[m], dev[m - 1], divisor);
+		mul_vector_by_const(div, abs_b.data, tq);
+		while ((tq >= 0) && compare_equal_vectors(dev, div)) {
+			mul_vector_by_const(div, abs_b.data, --tq);
 		}
-		b_j.divide_by_32();
+		sub_equal_vectors(dev, div);
+		for (size_t j = m; j > 0; j--) {
+			dev[j] = dev[j - 1];
+		}
+		temp[ri] = tq;
 	}
-	pop_zero(tmp);
-	remaind.division_by_const(more);
+	pop_zero(temp);
+	return big_integer(temp, a.isNegate ^ b.isNegate);
 }
 
 big_integer& big_integer::operator /= (big_integer const& other) {
@@ -324,30 +371,14 @@ big_integer& big_integer::operator /= (big_integer const& other) {
 		this->data = tmp;
 	}
 	else {
-		big_integer remaind(*this);
-		remaind.isNegate = false;
-		do_division(other, remaind, tmp);
-		this->data = tmp;
-		this->isNegate = (this->isNegate ^ other.isNegate);
-		make_positive(*this);
+		*this = do_division(*this, other);
 	}
 	return *this;
 }
 
 big_integer& big_integer::operator %= (big_integer const& other) {
-	std::vector <unsigned int> tmp(1, 0);
-	if (compare_module(other, *this)) {
-		//nothing
-	}
-	else {
-		big_integer remaind(*this);
-		remaind.isNegate = false;
-		do_division(other, remaind, tmp);
-		std::vector <unsigned int> cur = remaind.data;
-		pop_zero(cur);
-		this->data = cur;
-		make_positive(*this);
-	}
+	big_integer tmp(*this);
+	*this = tmp - (tmp / other) * other;
 	return *this;
 }
 
