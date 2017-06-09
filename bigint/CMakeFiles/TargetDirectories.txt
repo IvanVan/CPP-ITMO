@@ -1,3 +1,0 @@
-D:/С++/cpp-course/bigint/CMakeFiles/big_integer_testing.dir
-D:/С++/cpp-course/bigint/CMakeFiles/ALL_BUILD.dir
-D:/С++/cpp-course/bigint/CMakeFiles/ZERO_CHECK.dir
