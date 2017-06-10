@@ -29,11 +29,7 @@ _start:
 
                 jmp             exit
                 
-; multiplies two long numbers
-;    rdi -- address of multiplier #1 (long number)
-;    rsi -- address of multiplier #2 (long number)
-;    rcx -- length of long number in qwords
-; result:
+
 ;    product is written to r9
 mul_long_long:
 		push 		rsi
