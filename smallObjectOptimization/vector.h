@@ -5,25 +5,40 @@
 const int SMALL = 7;
 
 template <typename T>
-struct hdd {
+struct info {
 	int refs;
-	T a[];
+	T data[];
 };
 
 template<typename T>
 struct big_data {
-	hdd<T>* ptr;
-	size_t _size;
-	size_t volume;
+	info<T>* ptr;
+	size_t size_;
+	size_t capacity_;
 
-	size_t size() const { return _size; }
-	size_t capacity() const { return volume; }
-	T& operator[](size_t i) { return ptr->a[i]; }
-	T const& operator[](size_t i) const { return ptr->a[i]; }
-	void pop_back() { --_size; }
+	size_t size() const
+	{ 
+		return size_; 
+	}
+	size_t capacity() const 
+	{ 
+		return capacity_; 
+	}
+	T& operator[](size_t i) 
+	{ 
+		return ptr->data[i]; 
+	}
+	T const& operator[](size_t i) const 
+	{ 
+		return ptr->data[i]; 
+	}
+	void pop_back()
+	{
+		--size_; 
+	}
 	void push_back(T const& value) {
-		ptr->a[size()] = value;
-		++_size;
+		ptr->data[size()] = value;
+		++size_;
 	}
 };
 
@@ -32,11 +47,26 @@ struct small_data {
 	char magic;
 	T reg[SMALL];
 
-	size_t size() const { return magic / 2; }
-	size_t capacity() const { return SMALL; }
-	T& operator[](size_t i) { return reg[i]; }
-	T const& operator[](size_t i) const { return reg[i]; }
-	void pop_back() { magic -= 2; }
+	size_t size() const 
+	{
+		return magic / 2; 
+	}
+	size_t capacity() const 
+	{ 
+		return SMALL; 
+	}
+	T& operator[](size_t i) 
+	{ 
+		return reg[i]; 
+	}
+	T const& operator[](size_t i) const
+	{ 
+		return reg[i]; 
+	}
+	void pop_back() 
+	{ 
+		magic -= 2; 
+	}
 	void push_back(T const& value) {
 		reg[size()] = value;
 		magic += 2;
@@ -47,9 +77,9 @@ template <typename T>
 struct vector {
 
 	vector(size_t n = 0);
-	vector(vector const& x);
-	vector(int n, T element);
-	vector& operator=(vector const& other);
+	vector(vector const&);
+	vector(int, T);
+	vector& operator=(vector const&);
 	~vector();
 
 	bool is_small() const;
@@ -57,21 +87,21 @@ struct vector {
 	bool empty() const;
 	void resize(size_t n);
 	void pop_back();
-	void push_back(T const& value);
+	void push_back(T const&);
 	void clear();
 	T& back();
-	T& operator[](size_t i);
-	T const& operator[](size_t i) const;
+	T& operator[](size_t);
+	T const& operator[](size_t) const;
 
 private:
 
 	union {
-		big_data<T> bd;
-		small_data<T> sd;
+		big_data<T> big_object;
+		small_data<T> small_object;
 	};
 
 	void check_refs();
-	void ensure_cap(size_t n);
+	void ensure_cap(size_t);
 	size_t capacity() const;
 	void big_to_small();
 
@@ -81,14 +111,14 @@ private:
 template <typename T>
 vector<T>::vector(size_t n)
 {
-	sd.magic = 1;
+	small_object.magic = 1;
 	resize(n);
 }
 
 template <typename T>
-vector<T>::vector(vector const& x) : vector(0)
+vector<T>::vector(vector const& other) : vector(0)
 {
-	*this = x;
+	*this = other;
 }
 
 template<typename T>
@@ -106,7 +136,7 @@ vector<T>& vector<T>::operator=(vector const& other)
 	clear();
 	memcpy(this, &other, sizeof(vector));
 	if (!is_small()) {
-		bd.ptr->refs++;
+		big_object.ptr->refs++;
 	}
 	return *this;
 }
@@ -120,13 +150,13 @@ vector<T>::~vector()
 template <typename T>
 bool vector<T>::is_small() const
 {
-	return sd.magic & 1;
+	return small_object.magic & 1;
 }
 
 template <typename T>
 size_t vector<T>::size() const
 {
-	return is_small() ? sd.size() : bd.size();
+	return is_small() ? small_object.size() : big_object.size();
 }
 
 template <typename T>
@@ -144,10 +174,10 @@ void vector<T>::resize(size_t n)
 			for (size_t i = size(); i < n; ++i) {
 				(*this)[i] = 0;
 			}
-			sd.magic = 1 | (n << 1);
+			small_object.magic = 1 | (n << 1);
 		}
 		else {
-			bd._size = n;
+			big_object.size_ = n;
 			big_to_small();
 		}
 	}
@@ -156,7 +186,7 @@ void vector<T>::resize(size_t n)
 		for (size_t i = size(); i < n; ++i) {
 			(*this)[i] = 0;
 		}
-		bd._size = n;
+		big_object.size_ = n;
 	}
 }
 
@@ -164,7 +194,7 @@ template <typename T>
 void vector<T>::pop_back()
 {
 	check_refs();
-	is_small() ? sd.pop_back() : bd.pop_back();
+	is_small() ? small_object.pop_back() : big_object.pop_back();
 }
 
 template <typename T>
@@ -172,17 +202,17 @@ void vector<T>::push_back(T const& value)
 {
 	check_refs();
 	ensure_cap(size() + 1);
-	is_small() ? sd.push_back(value) : bd.push_back(value);
+	is_small() ? small_object.push_back(value) : big_object.push_back(value);
 }
 
 template <typename T>
 void vector<T>::clear()
 {
 	if (!is_small()) {
-		bd.ptr->refs--;
-		if (!bd.ptr->refs)
-			delete bd.ptr;
-		sd.magic = 1;
+		big_object.ptr->refs--;
+		if (!big_object.ptr->refs)
+			delete big_object.ptr;
+		small_object.magic = 1;
 	}
 }
 
@@ -196,25 +226,25 @@ template <typename T>
 T& vector<T>::operator[](size_t i)
 {
 	check_refs();
-	return is_small() ? sd[i] : bd[i];
+	return is_small() ? small_object[i] : big_object[i];
 }
 
 template <typename T>
 T const& vector<T>::operator[](size_t i) const
 {
-	return is_small() ? sd[i] : bd[i];
+	return is_small() ? small_object[i] : big_object[i];
 }
 
 template <typename T>
 void vector<T>::check_refs()
 {
-	if (!is_small() && bd.ptr->refs > 1) {
-		bd.ptr->refs--;
-		hdd<T>* tmp = bd.ptr;
-		bd.ptr = (hdd<T>*) operator new (sizeof(hdd<T>) + bd.volume * sizeof(T));
-		bd.ptr->refs = 1;
+	if (!is_small() && big_object.ptr->refs > 1) {
+		big_object.ptr->refs--;
+		info<T>* tmp = big_object.ptr;
+		big_object.ptr = (info<T>*) operator new (sizeof(info<T>) + big_object.capacity_ * sizeof(T));
+		big_object.ptr->refs = 1;
 		for (int i = 0; i < (int)size(); ++i) {
-			bd.ptr->a[i] = tmp->a[i];
+			big_object.ptr->data[i] = tmp->data[i];
 		}
 	}
 }
@@ -230,10 +260,10 @@ void vector<T>::ensure_cap(size_t n)
 			buf[i] = (*this)[i];
 		}
 		clear();
-		bd.ptr = (hdd<T>*) operator new (sizeof(hdd<T>) + sizeof(T) * n * 2);
-		bd.ptr->refs = 1;
-		bd._size = sz;
-		bd.volume = n * 2;
+		big_object.ptr = (info<T>*) operator new (sizeof(info<T>) + sizeof(T) * n * 2);
+		big_object.ptr->refs = 1;
+		big_object.size_ = sz;
+		big_object.capacity_ = n * 2;
 		for (size_t i = 0; i < sz; ++i) {
 			(*this)[i] = buf[i];
 		}
@@ -244,18 +274,18 @@ void vector<T>::ensure_cap(size_t n)
 template <typename T>
 size_t vector<T>::capacity() const
 {
-	return is_small() ? sd.capacity() : bd.capacity();
+	return is_small() ? small_object.capacity() : big_object.capacity();
 }
 
 template <typename T>
 void vector<T>::big_to_small()
 {
-	hdd<T>* tmp = bd.ptr;
+	info<T>* tmp = big_object.ptr;
 	size_t sz = size();
 	for (size_t i = 0; i != sz; ++i) {
-		sd.reg[i] = tmp->a[i];
+		small_object.reg[i] = tmp->data[i];
 	}
-	sd.magic = (sz << 1) | 1;
+	small_object.magic = (sz << 1) | 1;
 	tmp->refs--;
 	if (!tmp->refs) {
 		delete tmp;
