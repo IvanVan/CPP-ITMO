@@ -631,7 +631,6 @@ void big_integer::add_zero(int add, vector<unsigned int> & now) {
 big_integer::big_integer(vector<unsigned int> const &a, bool sign) :data(a), isNegate(sign) {}
 
 big_integer &big_integer::operator>>=(int rhs) {
-	int complete = rhs >> 5;
 	rhs &= 31;
 	big_integer ans(*this);
 	unsigned int tmp = 0;
